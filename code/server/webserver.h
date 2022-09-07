@@ -25,7 +25,7 @@ public:
     WebServer(
         int port, int trigMode, int timeoutMS, bool OptLinger, 
         int sqlPort, const char* sqlUser, const char* sqlPwd, const char* dbName, 
-        int connPoolNum, int threadNum, bool openLog, int logLevel, int logQueSize);
+        int connPoolNum, int threadNum, bool openLog, int logLevel, int logQueSize, int actor);
 
     ~WebServer();
     // 运行server
@@ -98,6 +98,9 @@ private:
     std::unique_ptr<Epoller> epoller_;
     // 客户端连接集合
     std::unordered_map<int, HttpConn> users_;
+
+    // 事件处理模式（reactor:0 or proactor:1）
+    int actor_;
 };
 
 

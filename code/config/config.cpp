@@ -26,6 +26,8 @@ Config::Config() {
     logLevel = 1;
     // 阻塞队列容量
     logQueSize = 1024;
+    // 事件处理模式默认为reactor
+    actor = 0;
 }
 
 void Config::ParseCmd(int argc, char *argv[]) {
@@ -41,7 +43,7 @@ void Config::ParseCmd(int argc, char *argv[]) {
                 openLog = atoi(optarg);
                 break;
             case 'm':
-                trigMode = atoi(optarg);
+                timeoutMS = atoi(optarg);
                 break;
             case 'o':
                 OptLinger = atoi(optarg);
@@ -56,7 +58,7 @@ void Config::ParseCmd(int argc, char *argv[]) {
                 logLevel = atoi(optarg);
                 break;
             case 'a':
-                timeoutMS = atoi(optarg);
+                actor = atoi(optarg);
                 break;
             default:
                 break;

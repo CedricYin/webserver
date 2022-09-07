@@ -6,9 +6,9 @@ WebServer::WebServer(
             int port, int trigMode, int timeoutMS, bool OptLinger,
             int sqlPort, const char* sqlUser, const  char* sqlPwd,
             const char* dbName, int connPoolNum, int threadNum,
-            bool openLog, int logLevel, int logQueSize):
+            bool openLog, int logLevel, int logQueSize, int actor):
             port_(port), openLinger_(OptLinger), timeoutMS_(timeoutMS), isClose_(false), sigutils_(),
-            timer_(new HeapTimer()), threadpool_(new ThreadPool(threadNum)), epoller_(new Epoller())
+            timer_(new HeapTimer()), threadpool_(new ThreadPool(threadNum)), epoller_(new Epoller()), actor_(actor)
     {
     srcDir_ = getcwd(nullptr, 256);
     assert(srcDir_);
@@ -33,8 +33,8 @@ WebServer::WebServer(
             LOG_INFO("Listen Mode: %s, OpenConn Mode: %s",
                         (listenEvent_ & EPOLLET ? "ET": "LT"),
                         (connEvent_ & EPOLLET ? "ET": "LT"));
+            LOG_INFO("Actor Mode: %s", actor_ ? "Proactor" : "Reactor");
             LOG_INFO("LogSys Status: %s", openLog ? "Open" : "Close");
-            // LOG_INFO("srcDir: %s", HttpConn::srcDir);
             LOG_INFO("SqlConnPool num: %d, ThreadPool num: %d", connPoolNum, threadNum);
             LOG_INFO("TimeOut: %ds", timeoutMS / 1000);
             LOG_INFO("DataBase: %s, SqlUser: %s, SqlPort: %d", dbName, sqlUser, sqlPort);
@@ -178,13 +178,26 @@ void WebServer::DealSignal_() {
 void WebServer::DealRead_(HttpConn* client) {
     assert(client);
     ExtentTime_(client);
-    threadpool_->AddTask(std::bind(&WebServer::OnRead_, this, client));
+    if(actor_ == 0)  // reactor
+        threadpool_->AddTask(std::bind(&WebServer::OnRead_, this, client));
+    else {  // proactor
+        int readErrno = 0;
+        int ret = client->read(&readErrno);
+        if(ret <= 0 && readErrno != EAGAIN) {
+            CloseConn_(client);
+            return;
+        }
+        threadpool_->AddTask(std::bind(&WebServer::OnProcess, this, client));
+    }
 }
 
 void WebServer::DealWrite_(HttpConn* client) {
     assert(client);
     ExtentTime_(client);
-    threadpool_->AddTask(std::bind(&WebServer::OnWrite_, this, client));
+    if(actor_ == 0)  // reactor
+        threadpool_->AddTask(std::bind(&WebServer::OnWrite_, this, client));
+    else  // proactor
+        OnWrite_(client);
 }
 
 void WebServer::ExtentTime_(HttpConn* client) {

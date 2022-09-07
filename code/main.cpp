@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     WebServer server(
         config.port, config.trigMode, config.timeoutMS, config.OptLinger,
         config.sqlPort, config.sqlUser, config.sqlPwd, config.dbName,
-        config.connPoolNum, config.threadNum, config.openLog, config.logLevel, config.logQueSize);
+        config.connPoolNum, config.threadNum, config.openLog, config.logLevel, config.logQueSize, config.actor);
 
     server.Start();
 

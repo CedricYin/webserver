@@ -31,6 +31,7 @@ public:
     bool openLog;
     int logLevel;
     int logQueSize;
+    int actor;
 };
 
 #endif
