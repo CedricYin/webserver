@@ -51,6 +51,7 @@ public:
     static bool isET;
     // 资源目录
     static const char* srcDir;
+    static const char* uploadDir;
     //  当前需要处理的请求数量
     static std::atomic<int> RequestCount;
     

@@ -13,8 +13,11 @@ WebServer::WebServer(
     srcDir_ = getcwd(nullptr, 256);
     assert(srcDir_);
     strncat(srcDir_, "/resources/", 16);
+    uploadDir_ = getcwd(nullptr, 256);
+    strcat(uploadDir_, "/resources/fromclients/");
     HttpConn::RequestCount = 0;
     HttpConn::srcDir = srcDir_;
+    HttpConn::uploadDir = uploadDir_;
     SqlConnPool::Instance()->Init("localhost", sqlPort, sqlUser, sqlPwd, dbName, connPoolNum);
 
     InitEventMode_(trigMode);

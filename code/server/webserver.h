@@ -80,6 +80,8 @@ private:
     int listenFd_;
     // 文件根目录
     char* srcDir_;
+    // 上传的文件根目录
+    char *uploadDir_;
 
     // 传递信号的管道
     int pipefd_[2];

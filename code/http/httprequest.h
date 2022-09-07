@@ -71,9 +71,11 @@ private:
     // 解析资源路径
     void ParsePath_();
     // 解析post消息体
-    void ParsePost_();
-    // 解析url编码，获取POST的参数
+    int ParsePost_();
+    // 解析form-urlencoded格式，获取POST的数据
     void ParseFromUrlencoded_();
+    // 解析multipart/form-data格式，获取POST的数据
+    void ParseFormData_();
 
     // 用户验证（登陆或注册）
     static bool UserVerify(const std::string& name, const std::string& pwd, bool isLogin);
@@ -94,6 +96,15 @@ private:
 
     // 16进制转10进制
     static int ConverHex(char ch);
+    
+    // 解析了几行请求内容
+    int ParseBody_cnt;
+    // 上传的文件名
+    std::string uploadfile_;
+    // 文件
+    FILE *fp_;
+    // 是否传文件
+    bool upload_;
 };
 
 

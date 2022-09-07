@@ -2,6 +2,7 @@
 using namespace std;
 
 const char* HttpConn::srcDir;
+const char* HttpConn::uploadDir;
 std::atomic<int> HttpConn::RequestCount;
 bool HttpConn::isET;
 

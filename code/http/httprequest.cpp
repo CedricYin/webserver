@@ -3,7 +3,7 @@ using namespace std;
 
 const unordered_set<string> HttpRequest::DEFAULT_HTML{
             "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", };
+             "/welcome", "/video", "/picture", "/upload", "/success"};
 
 const unordered_map<string, int> HttpRequest::DEFAULT_HTML_TAG {
             {"/register.html", 0}, {"/login.html", 1},  };
@@ -13,6 +13,7 @@ void HttpRequest::Init() {
     state_ = REQUEST_LINE;
     header_.clear();
     post_.clear();
+    upload_ = false;
 }
 
 bool HttpRequest::IsKeepAlive() const {
@@ -27,6 +28,7 @@ bool HttpRequest::parse(Buffer& buff) {
     if(buff.ReadableBytes() <= 0) {
         return false;
     }
+    ParseBody_cnt = 0;
     // buff中有数据可读，并且状态没有到FINISH，就一直解析
     while(buff.ReadableBytes() && state_ != FINISH) {
         // 获取一行数据，根据\r\n为结束标志
@@ -90,19 +92,29 @@ bool HttpRequest::ParseRequestLine_(const string& line) {
 void HttpRequest::ParseHeader_(const string& line) {
     regex patten("^([^:]*): ?(.*)$");  // 首部字段的正则表达式
     smatch subMatch;
-    if(regex_match(line, subMatch, patten)) {
+    if(regex_match(line, subMatch, patten))
         header_[subMatch[1]] = subMatch[2];
-    }
-    else {
+    else
         state_ = BODY;
-    }
 }
 
 void HttpRequest::ParseBody_(const string& line) {
+    if(!upload_ && header_["Content-Type"].find("multipart/form-data") != std::string::npos) {
+        upload_ = true;
+        int p = header_["Content-Type"].find("--");
+        header_["boundary"] = header_["Content-Type"].substr(p);
+    }
     body_ = line;
-    ParsePost_();
-    state_ = FINISH;
-    LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size());
+    ++ParseBody_cnt;
+
+    if(ParsePost_() != -1) state_ = FINISH;
+
+    if(!upload_) {
+        LOG_DEBUG("UserInfo: Usr&Pwd(%s), len(%d)", line.c_str(), line.size());
+    } else {
+        LOG_DEBUG("File UpLoad: line%d(%s), len(%d)", ParseBody_cnt, line.c_str(), line.size());
+    }
+        
 }
 
 int HttpRequest::ConverHex(char ch) {
@@ -111,7 +123,7 @@ int HttpRequest::ConverHex(char ch) {
     return ch;
 }
 
-void HttpRequest::ParsePost_() {
+int HttpRequest::ParsePost_() {
     if(method_ == "POST" && header_["Content-Type"] == "application/x-www-form-urlencoded") {
         ParseFromUrlencoded_();
         if(DEFAULT_HTML_TAG.count(path_)) {  // 若是注册或登陆
@@ -127,7 +139,27 @@ void HttpRequest::ParsePost_() {
                 }
             }
         }
+        return 0;
+    }
+    if(method_ == "POST" && upload_) {
+        // ParseFormData_();
+        if(ParseBody_cnt == 2) {
+            int p = body_.find("filename");
+            uploadfile_ = body_.substr(p + 10);
+            uploadfile_ = uploadfile_.substr(0, uploadfile_.size() - 1);
+            uploadfile_ = "./resources/fromclients/" + uploadfile_;
+            fp_ = fopen(uploadfile_.c_str(), "w");
+            return -1;
+        } else if(ParseBody_cnt == 5 && body_ != "--" + header_["boundary"] + "--") {
+            fputs(body_.c_str(), fp_);
+            fflush(fp_);  // 刷新缓冲区（若没有及时刷新，内核可能会延迟一段时间才将缓存区数据写到磁盘）
+            return -1;
+        } else if(body_ == "--" + header_["boundary"] + "--") {
+            path_ = "/success.html";
+            return 0;
+        }
     }   
+    return -1;
 }
 
 /*
@@ -173,6 +205,10 @@ void HttpRequest::ParseFromUrlencoded_() {
         value = body_.substr(j, i - j);
         post_[key] = value;
     }
+}
+
+void HttpRequest::ParseFormData_() {
+
 }
 
 bool HttpRequest::UserVerify(const string &name, const string &pwd, bool isLogin) {
