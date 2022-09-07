@@ -33,6 +33,7 @@
 │   ├── index.html
 │   ├── image
 │   ├── video
+│   ├── fromclients
 │   ├── js
 │   └── css
 ├── bin            可执行文件
@@ -75,7 +76,6 @@ make
 * QPS 10000+，若不开日志，可以达到20000+
 
 ## TODO
-* 各部分的README
 * 服务器后台化
 * 调用摄像头
 
